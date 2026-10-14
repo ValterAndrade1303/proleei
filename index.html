@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Painel ProLEEI · Perfil dos Participantes</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+<!-- Chart.js com fallback em 3 CDNs -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>window.Chart||document.write('<script src="https://unpkg.com/chart.js@4.4.1/dist/chart.umd.min.js"><\/script>')</script>
+<script>window.Chart||document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"><\/script>')</script>
+<style>
+:root{--ink:#1e3a5f;--blue:#2563eb;--teal:#0d9488;--amber:#f59e0b;--pink:#ec4899;--red:#ef4444;--bg:#f6f8fb;--card:#fff;--muted:#64748b;--line:#e2e8f0}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:#0f172a}
+.layout{display:flex;min-height:100vh}
+.sidebar{width:230px;background:var(--ink);color:#fff;position:fixed;top:0;bottom:0;left:0;z-index:50;display:flex;flex-direction:column;transition:transform .3s}
+.sidebar .brand{padding:20px 18px;border-bottom:1px solid rgba(255,255,255,.12)}
+.sidebar .brand h1{font-size:17px;font-weight:800;line-height:1.25}
+.sidebar .brand p{font-size:11px;opacity:.75;margin-top:4px}
+.nav{flex:1;padding:10px 0;overflow-y:auto}
+.nav button{display:flex;align-items:center;gap:10px;width:100%;padding:11px 18px;background:none;border:none;color:#cbd5e1;font:inherit;font-size:13.5px;cursor:pointer;text-align:left;border-left:3px solid transparent;transition:all .25s}
+.nav button:hover{background:rgba(255,255,255,.07);color:#fff}
+.nav button.active{background:rgba(37,99,235,.25);color:#fff;border-left-color:var(--blue);font-weight:600}
+.nav .ico{width:20px;text-align:center}
+.main{flex:1;margin-left:230px;padding:20px 26px 60px}
+.topbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:16px}
+.topbar h2{font-size:20px;font-weight:800;color:var(--ink);margin-right:auto}
+.btn{border:1px solid var(--line);background:#fff;border-radius:9px;padding:8px 14px;font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;color:var(--ink);transition:all .2s}
+.btn:hover{border-color:var(--blue);color:var(--blue)}
+.filters{display:flex;flex-wrap:wrap;gap:8px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:16px;box-shadow:0 1px 3px rgba(15,23,42,.05)}
+.filters label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-right:2px;align-self:center}
+.filters select{font:inherit;font-size:12.5px;padding:6px 9px;border:1px solid var(--line);border-radius:8px;background:#f8fafc;color:var(--ink);cursor:pointer}
+.page{display:none;animation:fadein .5s ease}
+.page.active{display:block}
+@keyframes fadein{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:18px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px;box-shadow:0 1px 4px rgba(15,23,42,.05)}
+.kpi .v{font-size:26px;font-weight:800;color:var(--ink)}
+.kpi .l{font-size:11.5px;color:var(--muted);font-weight:600;margin-top:3px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px;box-shadow:0 1px 4px rgba(15,23,42,.05);margin-bottom:14px}
+.card h3{font-size:14px;font-weight:700;color:var(--ink);margin-bottom:2px}
+.card .sub{font-size:11.5px;color:var(--muted);margin-bottom:10px}
+.card .head{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+.tgl{display:flex;gap:4px}
+.tgl button{border:1px solid var(--line);background:#fff;font:inherit;font-size:10.5px;font-weight:700;padding:4px 9px;border-radius:7px;cursor:pointer;color:var(--muted)}
+.tgl button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.chartbox{position:relative;height:300px}
+.chartbox.tall{height:420px}
+.chartbox canvas{max-width:100%}
+.tblwrap{display:none;max-height:340px;overflow:auto;border:1px solid var(--line);border-radius:9px}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{position:sticky;top:0;background:#f1f5f9;color:var(--ink);font-weight:700;padding:8px 10px;text-align:left;border-bottom:2px solid var(--line)}
+td{padding:7px 10px;border-bottom:1px solid var(--line)}
+.num{text-align:right;font-variant-numeric:tabular-nums}
+.notice{background:#fffbeb;border:1px solid #fcd34d;color:#92400e;border-radius:10px;padding:10px 14px;font-size:12.5px;margin-bottom:12px}
+.alert{background:#fef2f2;border:1px solid #fecaca;color:#991b1b;border-radius:10px;padding:12px 14px;font-size:12.5px}
+.insights{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px}
+.insight{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--blue);border-radius:12px;padding:14px 16px}
+.insight.warn{border-left-color:var(--red)}.insight.good{border-left-color:var(--teal)}
+.insight .n{font-size:11px;font-weight:800;color:var(--blue);text-transform:uppercase;letter-spacing:.5px}
+.insight.warn .n{color:var(--red)}.insight.good .n{color:var(--teal)}
+.insight h4{font-size:13.5px;margin:4px 0 6px;color:var(--ink)}
+.insight p{font-size:12.5px;color:#334155;line-height:1.55}
+.readout{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin-bottom:16px}
+.readout .card{margin:0}
+.readout .card p{font-size:12.5px;color:#334155;line-height:1.5;margin-top:4px}
+.readout .card strong{color:var(--ink)}
+.search{width:100%;max-width:340px;padding:8px 12px;border:1px solid var(--line);border-radius:9px;font:inherit;font-size:13px;margin-bottom:10px}
+footer{margin-top:30px;padding-top:14px;border-top:1px solid var(--line);font-size:11.5px;color:var(--muted)}
+.badge{display:inline-block;background:#fee2e2;color:#991b1b;font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;margin-left:6px}
+.menu-btn{display:none;position:fixed;top:12px;left:12px;z-index:60;background:var(--ink);color:#fff;border:none;border-radius:9px;padding:9px 12px;font-size:16px;cursor:pointer}
+@media(max-width:900px){.sidebar{transform:translateX(-100%)}.sidebar.open{transform:none}.main{margin-left:0;padding:64px 14px 50px}.menu-btn{display:block}}
+@media print{.sidebar,.filters,.menu-btn,.tgl,.btn{display:none!important}.main{margin:0}.page{display:block!important;page-break-after:always}}
+</style>
+</head>
+<body>
+<button class="menu-btn" onclick="document.querySelector('.sidebar').classList.toggle('open')">☰</button>
+<div class="layout">
+<aside class="sidebar">
+  <div class="brand"><h1>Painel ProLEEI</h1><p>Perfil dos Participantes · 2025/2026 · UFBA</p></div>
+  <nav class="nav" id="nav"></nav>
+</aside>
+<main class="main">
+  <div class="topbar">
+    <h2 id="pageTitle">Visão Geral</h2>
+    <button class="btn" id="animBtn" onclick="toggleAnim()">✦ Animações: ON</button>
+    <button class="btn" onclick="window.print()">🖨 Imprimir / PDF</button>
+    <button class="btn" onclick="clearFilters()">Limpar filtros</button>
+  </div>
+  <div class="filters" id="filters"></div>
+  <div id="banner"></div>
+  <div id="pages"></div>
+  <footer>Fonte: Base ProLEEI 2025/2026 — UFBA · Plataforma de inscrição (não avaliativa) · Extração 14–15/10/2026</footer>
+</main>
+</div>
+<script>
+/* ================= DADOS REAIS (extração 14–15/10/2026) ================= */
+const D={
+kpi:{cursistas:12415,fm:551,fe:27,total:12993,mun:400,fem:93.4,pp:79.6,municipal:94.5},
+genero:[["Feminino",11597,93.41],["Masculino",352,2.84],["Não preenchido",456,3.67],["Prefiro não me identificar",10,0.08]],
+raca:[["Parda",7149,57.58],["Preta",2728,21.97],["Branca",1683,13.56],["Amarela",167,1.35],["Indígena",121,0.97],["Prefiro não responder",110,0.89],["Não preenchido",456,3.67],["Indígena | Parda (múltipla)",1,0.01]],
+faixa:[["18–26 anos",983,7.9],["27–36 anos",2799,22.5],["37–46 anos",4162,33.5],["47–56 anos",3143,25.3],["57–66 anos",785,6.3],["67+ anos",42,0.3],["Inválido/não informado",501,4.0]],
+esc:[["Superior completo",4973,40.06],["Especialização completa",3924,31.61],["Ensino Médio completo",1562,12.58],["Normal superior completo",865,6.97],["Normal/Magistério nível médio",484,3.90],["Mestrado completo",145,1.17],["Doutorado completo",8,0.06],["Não preenchido",454,3.66]],
+formacao:[["Pedagogia",9880,79.6],["Outra licenciatura",1186,9.6],["Outra formação",1118,9.0],["Magistério",15,0.12],["Ensino Médio",15,0.12],["Não preenchido",108,0.87],["Outras grafias",93,0.75]],
+exp:[["Menos de 1 ano",1340,10.79],["Entre 1 e 2 anos",2293,18.47],["Entre 3 e 5 anos",2774,22.34],["Entre 6 e 10 anos",2214,17.83],["Entre 11 e 20 anos",1923,15.49],["Mais de 20 anos",1336,10.76],["Não preenchido",535,4.31]],
+cargoC:[["Professor/a EI (0–6 anos)",7347,59.2],["Professor/a Anos Iniciais EF",1499,12.1],["Coordenador/a pedagógico/a",1440,11.6],["Auxiliar/assistente de turma",975,7.9],["Diretor/a ou vice",380,3.1],["Professor/a pré-escola (grafia variada)",150,1.2],["Outro",191,1.5],["Técnico/a SE",33,0.27],["Supervisor/a educacional",27,0.22],["Não preenchido",134,1.08]],
+cargoA:[["Prof. EI Pré-escola (4–6)",3790,30.5],["Prof. EI Creche (0–3)",3480,28.0],["Coordenador/a pedagógico/a",1970,15.9],["Prof. Anos Iniciais EF",1253,10.1],["Auxiliar/assistente de turma",850,6.8],["Diretor/a ou vice",532,4.3],["Técnico/a SE",49,0.39],["Supervisor/a educacional",35,0.28],["Prof. Ed. Especial (AEE)",33,0.27],["Outro",124,1.0],["Não preenchido",193,1.55]],
+vinculo:[["Contrato temporário",7072,56.96],["Servidor/a público/a efetivo/a",4629,37.29],["CLT",131,1.06],["Não preenchido",542,4.37],["Outros/acumulados",39,0.31]],
+catAdm:[["Pública municipal",11737,94.54],["Não preenchido",537,4.33],["Conveniada",57,0.46],["Pública estadual",44,0.35],["Pública distrital",31,0.25],["Pública federal",9,0.07]],
+universidade:[["UFBA",11711,94.33],["Não preenchido",454,3.66],["UFPR",39,0.31],["UnB",22,0.18],["UFMG",21,0.17],["UFPE",15,0.12],["UNIFESP",15,0.12],["UFSC",15,0.12],["UFPA",14,0.11],["UFPI",13,0.10],["UFS",12,0.10],["UFAL",11,0.09],["UFES",11,0.09],["Outras (13 UF's)",66,0.53]],
+part2024:[["Não (novo no programa)",9775,78.74],["Não participei em 2024",943,7.60],["Sim (veterano/a)",840,6.77],["Não preenchido",677,5.45],["professor/a cursista ⚠",125,1.01],["formador/a municipal ⚠",52,0.42],["Outras respostas ⚠",3,0.02]],
+leituras:[["2–3x por semana",4511,36.34],["4–5x por semana",4454,35.88],["1x por semana",1974,15.90],["1x a cada 15 dias",339,2.73],["Não realizam leituras",61,0.49],["Não se aplica",447,3.60],["Não preenchido",628,5.06]],
+livros:[["11–20 livros",3644,29.35],["1–10 livros",2445,19.69],["Mais de 31 livros",2352,18.94],["21–30 livros",2206,17.77],["Não há livros na sala",467,3.76],["Não se aplica",537,4.33],["Não preenchido",762,6.14]],
+racaEsc:{ordem:["Branca","Preta","Parda","Amarela","Indígena"],supPct:[78.0,77.7,74.6,72.5,59.5]},
+escExp:{ordem:["Ensino Médio completo","Superior completo","Especialização completa"],expOrd:["Menos de 1 ano","Entre 1 e 2 anos","Entre 3 e 5 anos","Entre 6 e 10 anos","Entre 11 e 20 anos","Mais de 20 anos"],
+mat:{"Ensino Médio completo":[417,587,380,103,37,26],"Superior completo":[549,954,1221,936,757,525],"Especialização completa":[231,462,822,890,914,582]}},
+munC:[["Campo Formoso",130],["Barreiras",129],["Itaberaba",95],["Belmonte",94],["Eunápolis",79],["Buritirama",79],["Alagoinhas",78],["Vitória da Conquista",76],["Itabuna",75],["Conceição do Coité",74],["Araci",73],["Itabela",66],["Guaratinga",64],["Itiúba",62],["Una",61],["Valença",60],["Anagé",59],["Tucano",58],["Barra",55],["Canarana",53],["Caetité",50],["Ilhéus",50],["Ibotirama",49],["Aracatu",47],["Euclides da Cunha",46],["Ipirá",46],["Feira de Santana",45],["Vera Cruz",44],["Caetanos",44],["Aiquara",43],["Formosa do Rio Preto",42],["Coronel João Sá",41],["Correntina",39],["Ipupiara",37],["Alcobaça",37],["Água Fria",36],["Itanhém",36],["Central",36],["Várzea do Poço",33],["Capim Grosso",33],["Irecê",33],["Várzea Nova",32],["Brumado",31],["Uauá",31],["Uruçuca",30],["Xique-Xique",28],["Érico Cardoso",27],["Valente",29],["Tremedal",34]],
+munFM:[["Juazeiro",8],["Barreiras",4],["Camaçari",4],["Alagoinhas",3],["Araci",3],["Buritirama",3],["Campo Formoso",3],["Eunápolis",3],["Guaratinga",3],["Itaberaba",3],["Itabuna",3],["Itamaraju",3],["Bom Jesus da Lapa",3],["Jequié",3],["Feira de Santana",2],["Belmonte",2],["Caetité",2],["Casa Nova",2]],
+munFE:[["Salvador",20],["Feira de Santana",2],["São Francisco do Conde",2],["Guanambi",1],["Jequié",1],["Valente",1]],
+fm:{univ:[["UFBA",520,94.4],["Não preenchido",26,4.7],["UFPE",5,0.9]],funcao:[["Formador/a municipal ou local",296,53.7],["Professor/a cursista (recondução)",148,26.9],["Não participei em 2024",81,14.7],["Não preenchido",26,4.7]]},
+fe:{univ:[["UFBA",27,100]],funcao:[["Formador/a estadual ou distrital",17,63.0],["Não participei em 2024",9,33.3],["Formador/a municipal (acúmulo)",1,3.7]]}
+};
+/* ================= ESTADO ================= */
+const PAGES=[["geral","Visão Geral","🏠"],["perfil","Perfil Sociodemográfico","👥"],["traj","Trajetória & Vínculo","💼"],["mun","Municípios da Bahia","🗺️"],["prat","Prática Pedagógica","📖"],["form","Formadores","🎓"],["ins","Insights & Qualidade","💡"]];
+/* mapa: página -> gráficos que pertencem a ela (SÓ estes são desenhados) */
+const PAGE_CHARTS={
+ geral:["pubRosca","genG","racG","uniG"],
+ perfil:["genP","racP","faxP","escP","forP","reP"],
+ traj:["expT","ccT","caT","vinT","admT"],
+ mun:["munChart"],
+ prat:["p24","leit","liv"],
+ form:["fUni","fMun","fFun"],
+ ins:[]
+};
+let state={pub:"Cursistas",gen:"",rac:"",esc:"",exp:"",vin:""},charts={},animOn=true,curPage="geral";
+const fmt=n=>n.toLocaleString('pt-BR');
+const PAL=["#2563eb","#0d9488","#f59e0b","#ec4899","#1e3a5f","#7c3aed","#ef4444","#0891b2","#65a30d","#a16207"];
+function buildFilters(){
+ const f=[["pub","Público",["Cursistas","Formadores Municipais","Formadores Estaduais"]],
+ ["gen","Gênero",D.genero.map(r=>r[0])],["rac","Raça/Cor",D.raca.map(r=>r[0])],
+ ["esc","Escolaridade",D.esc.map(r=>r[0])],["exp","Experiência",D.exp.map(r=>r[0])],["vin","Vínculo",D.vinculo.map(r=>r[0])]];
+ document.getElementById('filters').innerHTML='<label>Filtros</label>'+f.map(([k,l,ops])=>`<label style="text-transform:none;color:#1e3a5f">${l}</label><select data-k="${k}"><option value="">Todos</option>${ops.map(o=>`<option ${state[k]===o?'selected':''}>${o}</option>`).join('')}</select>`).join('');
+ document.querySelectorAll('#filters select').forEach(s=>s.onchange=e=>{state[s.dataset.k]=e.target.value;renderAll();});
+}
+function clearFilters(){state={pub:"Cursistas",gen:"",rac:"",esc:"",exp:"",vin:""};buildFilters();renderAll();}
+function sociodemActive(){return state.gen||state.rac||state.esc||state.exp||state.vin;}
+function banner(){
+ const b=document.getElementById('banner');let h='';
+ if(sociodemActive()&&state.pub!=="Cursistas")h+=`<div class="notice">⚠️ Filtros sociodemográficos aplicam-se apenas ao público <strong>Cursistas</strong>. Troque o filtro de Público para ver o recorte.</div>`;
+ else if(sociodemActive())h+=`<div class="notice">🔎 Filtros ativos: ${Object.entries(state).filter(([k,v])=>v&&k!=='pub').map(([k,v])=>`<strong>${v}</strong>`).join(' · ')} — os gráficos compatíveis com o recorte foram recalculados; os demais exibem o dado agregado.</div>`;
+ b.innerHTML=h;
+}
+/* ================= HELPERS DE GRÁFICO (com diagnóstico) ================= */
+function mk(id,cfg){
+ const el=document.getElementById('ch_'+id);
+ if(!el)return;
+ if(typeof Chart==='undefined'){el.parentElement.innerHTML='<div class="alert">⚠️ A biblioteca de gráficos (Chart.js) não foi carregada. Verifique sua conexão com a internet e recarregue a página (F5).</div>';return;}
+ if(charts[id]){charts[id].destroy();delete charts[id];}
+ charts[id]=new Chart(el,cfg);
+}
+function barCfg(labels,vals,opts={}){return{type:'bar',data:{labels,datasets:[{data:vals,backgroundColor:opts.colors||PAL[0],borderRadius:6,maxBarThickness:46}]},
+ options:{indexAxis:opts.horiz?'y':'x',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${fmt(c.parsed[opts.horiz?'x':'y'])}${opts.pct?' ('+opts.pct[c.dataIndex]+'%)':''}`}}},
+ onClick:opts.filterKey?((e,els)=>{if(!els.length)return;state[opts.filterKey]=labels[els[0].index];buildFilters();renderAll();}):undefined,
+ animation:animOn?{duration:900,easing:'easeOutQuart'}:false}};}
+function doughCfg(labels,vals){return{type:'doughnut',data:{labels,datasets:[{data:vals,backgroundColor:PAL,borderWidth:2,borderColor:'#fff'}]},
+ options:{responsive:true,maintainAspectRatio:false,cutout:'58%',plugins:{legend:{position:'right'}},animation:animOn?{duration:900,easing:'easeOutQuart'}:false}};}
+function card(id,title,sub,inner,tall){return `<div class="card"><div class="head"><div><h3>${title}</h3><div class="sub">${sub}</div></div><div class="tgl"><button class="on" onclick="tg(this,'${id}',1)">Gráfico</button><button onclick="tg(this,'${id}',0)">Tabela</button></div></div><div class="chartbox${tall?' tall':''}">${inner}</div><div class="tblwrap" id="tbl_${id}"></div></div>`;}
+function tg(btn,id,mode){const c=btn.parentElement.parentElement;[...btn.parentElement.children].forEach(b=>b.classList.remove('on'));btn.classList.add('on');
+ c.querySelector('.chartbox').style.display=mode?'block':'none';c.querySelector('.tblwrap').style.display=mode?'none':'block';}
+function fillTable(id,rows,heads){const t=document.getElementById('tbl_'+id);if(!t)return;
+ t.innerHTML=`<table><thead><tr>${heads.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${r.map(c=>`<td class="${typeof c==='number'?'num':''}">${typeof c==='number'?fmt(c):c}</td>`).join('')}</tr>`).join('')}</tbody></table>`;}
+function distTable(arr){return arr.map(r=>[r[0],r[1],r[2]+'%']);}
+/* ================= KPIs ANIMADOS ================= */
+function animNum(el,target,suffix=''){const start=performance.now(),dur=animOn?900:0;
+ function step(t){const p=dur?Math.min((t-start)/dur,1):1,e=1-Math.pow(1-p,4);el.textContent=fmt(Math.round(target*e))+suffix;if(p<1)requestAnimationFrame(step);}
+ requestAnimationFrame(step);}
+function kpi(v,l){return `<div class="kpi"><div class="v">${fmt(v)}</div><div class="l">${l}</div></div>`;}
+function setKpis(id,list){const el=document.getElementById(id);if(!el)return;el.innerHTML=list.map(([v,l])=>kpi(v,l)).join('');}
+/* ================= ESTRUTURA DAS PÁGINAS ================= */
+function buildPages(){
+ document.getElementById('nav').innerHTML=PAGES.map(([k,l,i])=>`<button data-p="${k}" onclick="go('${k}')"><span class="ico">${i}</span>${l}</button>`).join('');
+ document.getElementById('pages').innerHTML=`
+ <section class="page" id="p_geral">
+  <div class="kpis" id="kpiGeral"></div>
+  <div class="readout">
+   <div class="card"><h3>🎯 Perfil dominante</h3><p><strong>Professora da rede municipal</strong>, feminina (93,4%), parda ou preta (79,6%), superior completo (72,9%) e até 5 anos de experiência (51,6%).</p></div>
+   <div class="card"><h3>⚠️ Ponto de atenção</h3><p><strong>57% com contrato temporário</strong> — instabilidade funcional é o maior risco à continuidade das práticas de letramento.</p></div>
+   <div class="card"><h3>📖 Cultura de leitura</h3><p><strong>88,1% leem ≥1x/semana</strong>, mas 23,5% têm acervo insuficiente — o gargalo está no material, não na prática.</p></div>
+   <div class="card"><h3>🆕 Público novo</h3><p><strong>78,7% não participaram do LEEI 2024</strong> — edição 2025/2026 é majoritariamente de primeira viagem.</p></div>
+  </div>
+  <div class="grid">
+   ${card('pubRosca','Participantes por público','Total de inscritos na plataforma de inscrição','<canvas id="ch_pubRosca"></canvas>')}
+   ${card('genG','Gênero (Cursistas)','"Qual o seu sexo?" — clique numa barra para filtrar','<canvas id="ch_genG"></canvas>')}
+   ${card('racG','Cor/Raça (Cursistas)','"Qual a sua cor/raça?" — clique para filtrar','<canvas id="ch_racG"></canvas>')}
+   ${card('uniG','Universidade de vínculo (Cursistas)','UFBA concentra 94,3% dos vínculos','<canvas id="ch_uniG"></canvas>')}
+  </div>
+ </section>
+ <section class="page" id="p_perfil">
+  <div class="kpis" id="kpiPerfil"></div>
+  <div class="grid">
+   ${card('genP','Gênero','93,4% feminino — perfil típico da Educação Infantil','<canvas id="ch_genP"></canvas>')}
+   ${card('racP','Cor/Raça','79,6% pretos ou pardos','<canvas id="ch_racP"></canvas>')}
+   ${card('faxP','Faixa etária (derivada do ano de nascimento)','Mediana ≈ 41 anos · 501 registros com data inválida/ausente','<canvas id="ch_faxP"></canvas>')}
+   ${card('escP','Maior nível de escolaridade','72,9% com superior completo ou mais','<canvas id="ch_escP"></canvas>')}
+   ${card('forP','Formação inicial','79,6% Pedagogia (agrupamento de 113 grafias)','<canvas id="ch_forP"></canvas>')}
+   ${card('reP','Equidade racial: % com superior completo+','% dentro de cada cor/raça','<canvas id="ch_reP"></canvas>')}
+  </div>
+  <div class="card"><h3>Tabela: Cor/Raça × Escolaridade <span class="badge">cruzamento</span></h3><div class="sub">% de cursistas com superior completo ou mais, dentro de cada cor/raça · Ensino Médio completo: Parda 973 · Preta 315 · Branca 198 · Indígena 38 (31,4% das indígenas) · Mestrado: Parda 75 · Preta 41 · Branca 28 · Doutorado: Parda 4 · Branca 3 · Preta 1</div>
+   <div class="tblwrap" style="display:block;max-height:none" id="tbl_reP"></div></div>
+ </section>
+ <section class="page" id="p_traj">
+  <div class="kpis" id="kpiTraj"></div>
+  <div class="grid">
+   ${card('expT','Tempo de atuação com Educação Infantil','51,6% têm até 5 anos — clique para filtrar','<canvas id="ch_expT"></canvas>')}
+   ${card('ccT','Cargo pelo qual foi contratado/a','Agrupamento de 167 grafias livres','<canvas id="ch_ccT"></canvas>')}
+   ${card('caT','Cargo/função atual na rede','Agrupamento de 148 grafias livres','<canvas id="ch_caT"></canvas>')}
+   ${card('vinT','Tipo de vínculo','57% contrato temporário — clique para filtrar','<canvas id="ch_vinT"></canvas>')}
+   ${card('admT','Categoria administrativa da rede','94,5% rede pública municipal','<canvas id="ch_admT"></canvas>')}
+  </div>
+  <div class="card"><h3>Tabela: Escolaridade × Experiência <span class="badge">cruzamento</span></h3><div class="sub">Perfil jovem no Ensino Médio; veteranas pós-graduadas na Especialização</div>
+   <div class="tblwrap" style="display:block;max-height:none" id="tbl_ee"></div></div>
+ </section>
+ <section class="page" id="p_mun">
+  <div class="kpis" id="kpiMun"></div>
+  ${card('munChart','Top 20 municípios','Reordena com animação ao trocar o filtro de Público','<canvas id="ch_munChart"></canvas>',true)}
+  <div class="card"><h3>Todos os municípios (Cursistas — top 50 exibidos)</h3><input class="search" placeholder="🔍 Buscar município..." oninput="filterMun(this.value)"><div class="tblwrap" style="display:block;max-height:420px" id="tbl_mun"></div></div>
+  <div class="alert"><strong>⚠️ Inconsistências detectadas na base:</strong> "BARRA DA ESTIVA" vs "Barra da Estiva" (mesmo município, 67 registros somados) · "CÂNDIDO SALES-BA" vs "Cândido Sales" · 1 registro com código IBGE 2925501 no lugar do nome (Formadores Municipais) · 38 cursistas sem município informado. Recomenda-se padronização cadastral.</div>
+ </section>
+ <section class="page" id="p_prat">
+  <div class="kpis" id="kpiPrat"></div>
+  <div class="grid">
+   ${card('p24','Já participou do LEEI em 2024?','Pergunta de participação anterior — NÃO é conclusão. Respostas inconsistentes em vermelho','<canvas id="ch_p24"></canvas>')}
+   ${card('leit','Frequência de leitura de livros infantis com as crianças','88,1% leem pelo menos 1x/semana','<canvas id="ch_leit"></canvas>')}
+   ${card('liv','Livros de literatura infantil disponíveis na sala','23,5% com acervo insuficiente (≤10 livros ou nenhum)','<canvas id="ch_liv"></canvas>')}
+  </div>
+  <div class="notice">📌 As perguntas q90 (percepções sobre as crianças) constam do formulário, mas suas distribuições não vieram nesta extração — serão incorporadas na próxima atualização da base.</div>
+ </section>
+ <section class="page" id="p_form">
+  <div class="kpis" id="kpiForm"></div>
+  <div class="grid">
+   ${card('fUni','Universidade de vínculo','Municipais: UFBA 94,4% · Estaduais: UFBA 100%','<canvas id="ch_fUni"></canvas>')}
+   ${card('fMun','Municípios (top 15)','Municipais: Juazeiro lidera (8) · Estaduais: Salvador concentra 20 de 27','<canvas id="ch_fMun"></canvas>')}
+   ${card('fFun','Função assumida no LEEI em 2024','Pipeline de formação: muitos formadores municipais foram professor/a cursista em 2024','<canvas id="ch_fFun"></canvas>')}
+  </div>
+  <div class="notice">📌 O perfil sociodemográfico detalhado dos formadores será incorporado na próxima extração da base.</div>
+ </section>
+ <section class="page" id="p_ins">
+  <div class="insights" id="insGrid"></div>
+  <div class="alert" style="margin-top:14px"><strong>🧹 Qualidade dos dados — recomendações:</strong> 27 nascimentos registrados em 2026 e anos impossíveis (1772, 1870, 1885, 1889, 1891, 1910, 1919, 1937, 2018, 2025, 2084) · 167 grafias de cargo e 113 de formação inicial · resposta múltipla "Indígena | Parda" · grafias duplicadas de municípios. <strong>Ações:</strong> validação de datas no formulário, listas fechadas nos campos livres, normalização cadastral e monitoramento por NTE.</div>
+ </section>`;
+ document.getElementById('insGrid').innerHTML=[
+ ["good","1 · Feminização extrema","93,4% das cursistas são mulheres — coerente com a Educação Infantil, mas reforça a necessidade de políticas de gênero na docência."],
+ ["good","2 · Programa majoritariamente negro e pardo","79,6% pretos ou pardos — alinhado ao perfil populacional baiano; ponto positivo de equidade racial."],
+ ["","3 · Escolarização alta, com ressalva","72,9% têm superior completo ou mais, mas 23,4% ainda não (1.562 médio + 484 magistério + 865 normal superior) — tensão com a LDB."],
+ ["warn","4 · Precarização do vínculo","57% com contrato temporário vs 37,3% efetivas — rotatividade ameaça a continuidade das práticas de letramento."],
+ ["good","5 · Momento formativo ideal","51,6% têm até 5 anos de experiência — o programa chega no início de carreira."],
+ ["good","6 · Cultura de leitura consolidada","88,1% leem livros infantis pelo menos 1x/semana; apenas 0,49% não realizam leituras."],
+ ["warn","7 · Gargalo do acervo","23,5% das salas têm ≤10 livros ou nenhum — alvo direto de ação de distribuição (PNLD EI)."],
+ ["","8 · Programa em renovação","78,7% não participaram do LEEI 2024 — público majoritariamente novo; 6,77% são veteranos."],
+ ["good","9 · Capilaridade territorial","~400 municípios baianos atendidos; líderes Campo Formoso (130) e Barreiras (129)."],
+ ["","10 · Centralização institucional","UFBA responde por 94,3% dos vínculos; Salvador concentra 74% dos formadores estaduais."],
+ ["good","11 · Rede municipal","94,5% atuam na rede pública municipal — o programa é essencialmente municipal."],
+ ["warn","12 · Qualidade dos dados","Datas impossíveis, grafias livres e duplicadas comprometem análises finas — normalização cadastral é prioridade."]
+ ].map(([c,t,p])=>`<div class="insight ${c}"><div class="n">Insight</div><h4>${t}</h4><p>${p}</p></div>`).join('');
+ fillTable('reP',D.racaEsc.ordem.map((c,i)=>[c,D.racaEsc.supPct[i]+'%']),["Cor/Raça","% com superior completo ou mais"]);
+ fillTable('ee',D.escExp.ordem.map(e=>[e,...D.escExp.mat[e]]),["Escolaridade",...D.escExp.expOrd]);
+ fillTable('mun',D.munC.map(r=>[r[0],r[1]]),["Município","Cursistas"]);
+ fillTable('pubRosca',[["Cursistas",12415,"95,5%"],["Formadores Municipais",551,"4,2%"],["Formadores Estaduais",27,"0,2%"]],["Público","n","%"]);
+ ['genG','racG','uniG','genP','racP','faxP','escP','forP','expT','ccT','caT','vinT','admT','p24','leit','liv'].forEach(id=>{
+  const key={genG:'genero',racG:'raca',uniG:'universidade',genP:'genero',racP:'raca',faxP:'faixa',escP:'esc',forP:'formacao',expT:'exp',ccT:'cargoC',caT:'cargoA',vinT:'vinculo',admT:'catAdm',p24:'part2024',leit:'leituras',liv:'livros'}[id];
+  fillTable(id,distTable(D[key]),["Categoria","n","%"]);});
+}
+function go(p){
+ curPage=p;
+ document.querySelectorAll('.page').forEach(s=>s.classList.remove('active'));
+ document.getElementById('p_'+p).classList.add('active');
+ document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('active',b.dataset.p===p));
+ document.getElementById('pageTitle').textContent=PAGES.find(x=>x[0]===p)[1];
+ document.querySelector('.sidebar').classList.remove('open');
+ renderAll();
+}
+function filterMun(q){const rows=D.munC.filter(r=>r[0].toLowerCase().includes(q.toLowerCase()));
+ document.getElementById('tbl_mun').querySelector('tbody').innerHTML=rows.map(r=>`<tr><td>${r[0]}</td><td class="num">${fmt(r[1])}</td></tr>`).join('');}
+/* ================= RENDER — só desenha gráficos da página ativa ================= */
+function renderAll(){
+ banner();
+ /* destrói gráficos de TODAS as páginas (evita vazamento) */
+ Object.keys(charts).forEach(id=>{charts[id].destroy();delete charts[id];});
+ const ids=PAGE_CHARTS[curPage]||[];
+ const sd=sociodemActive(),notice=sd&&state.pub!=="Cursistas";
+ /* KPIs */
+ if(curPage==='geral'){setKpis('kpiGeral',[[D.kpi.total,'Total de participantes'],[D.kpi.cursistas,'Cursistas'],[D.kpi.fm,'Formadores Municipais'],[D.kpi.fe,'Formadores Estaduais'],[D.kpi.mun,'Municípios atendidos (≈)'],[D.kpi.fem+'%','Feminino']]);}
+ if(curPage==='perfil'){setKpis('kpiPerfil',[[D.kpi.cursistas,'Cursistas'],['93,4%','Feminino'],['79,6%','Pretos/Pardos'],['72,9%','Super completo+'],['41','Idade mediana (≈)']]);}
+ if(curPage==='traj'){setKpis('kpiTraj',[['56,96%','Contrato temporário'],['37,29%','Efetivos'],['51,6%','≤5 anos de exp.'],['10,76%','+20 anos']]);}
+ if(curPage==='mun'){
+  const ds=state.pub==="Formadores Municipais"?D.munFM:state.pub==="Formadores Estaduais"?D.munFE:D.munC;
+  const tot=state.pub==="Formadores Municipais"?551:state.pub==="Formadores Estaduais"?27:12415;
+  const nm=state.pub==="Formadores Estaduais"?6:state.pub==="Formadores Municipais"?358:D.kpi.mun;
+  setKpis('kpiMun',[[nm,'Municípios atendidos'],[ds[0][1],'Líder: '+ds[0][0]],[Math.round(tot/nm),'Média por município']]);}
+ if(curPage==='prat'){setKpis('kpiPrat',[['88,1%','Leem ≥1x/semana'],['0,49%','Não leem'],['23,5%','Acervo insuficiente'],['6,77%','Veteranos LEEI 2024']]);}
+ if(curPage==='form'){const isFE=state.pub==="Formadores Estaduais";
+  setKpis('kpiForm',[[isFE?27:551,isFE?'Formadores Estaduais':'Formadores Municipais'],[isFE?'100%':'94,4%','UFBA'],[isFE?17:296,'Formadores ativos em 2024'],[isFE?'Salvador (20)':'Juazeiro (8)','Município-líder']]);}
+ /* Gráficos — APENAS da página ativa (agora visível, com dimensões corretas) */
+ if(ids.includes('pubRosca'))mk('pubRosca',doughCfg(['Cursistas','Form. Municipais','Form. Estaduais'],[12415,551,27]));
+ if(ids.includes('genG'))mk('genG',barCfg(D.genero.map(r=>r[0]),D.genero.map(r=>r[1]),{filterKey:'gen',colors:D.genero.map(r=>state.gen===r[0]?'#ef4444':'#2563eb')}));
+ if(ids.includes('racG'))mk('racG',barCfg(D.raca.map(r=>r[0]),D.raca.map(r=>r[1]),{filterKey:'rac',colors:D.raca.map(r=>state.rac===r[0]?'#ef4444':'#0d9488')}));
+ if(ids.includes('uniG'))mk('uniG',barCfg(D.universidade.map(r=>r[0]),D.universidade.map(r=>r[1]),{horiz:true,colors:D.universidade.map(r=>r[0]==='UFBA'?'#1e3a5f':'#93c5fd')}));
+ if(ids.includes('genP'))mk('genP',barCfg(D.genero.map(r=>r[0]),D.genero.map(r=>r[1]),{filterKey:'gen'}));
+ if(ids.includes('racP'))mk('racP',barCfg(D.raca.map(r=>r[0]),D.raca.map(r=>r[1]),{filterKey:'rac'}));
+ if(ids.includes('faxP'))mk('faxP',barCfg(D.faixa.map(r=>r[0]),D.faixa.map(r=>r[1])));
+ if(ids.includes('escP'))mk('escP',barCfg(D.esc.map(r=>r[0]),D.esc.map(r=>r[1]),{filterKey:'esc',horiz:true}));
+ if(ids.includes('forP'))mk('forP',barCfg(D.formacao.map(r=>r[0]),D.formacao.map(r=>r[1]),{horiz:true}));
+ if(ids.includes('reP'))mk('reP',barCfg(D.racaEsc.ordem,D.racaEsc.supPct,{colors:['#0d9488','#0d9488','#0d9488','#f59e0b','#ef4444']}));
+ if(ids.includes('expT'))mk('expT',barCfg(D.exp.map(r=>r[0]),D.exp.map(r=>r[1]),{filterKey:'exp',horiz:true}));
+ if(ids.includes('ccT'))mk('ccT',barCfg(D.cargoC.map(r=>r[0]),D.cargoC.map(r=>r[1]),{horiz:true}));
+ if(ids.includes('caT'))mk('caT',barCfg(D.cargoA.map(r=>r[0]),D.cargoA.map(r=>r[1]),{horiz:true}));
+ if(ids.includes('vinT'))mk('vinT',barCfg(D.vinculo.map(r=>r[0]),D.vinculo.map(r=>r[1]),{filterKey:'vin'}));
+ if(ids.includes('admT'))mk('admT',barCfg(D.catAdm.map(r=>r[0]),D.catAdm.map(r=>r[1]),{horiz:true}));
+ if(ids.includes('p24'))mk('p24',barCfg(D.part2024.map(r=>r[0]),D.part2024.map(r=>r[1]),{horiz:true,colors:D.part2024.map(r=>r[0].includes('⚠')?'#ef4444':'#2563eb')}));
+ if(ids.includes('leit'))mk('leit',barCfg(D.leituras.map(r=>r[0]),D.leituras.map(r=>r[1]),{horiz:true}));
+ if(ids.includes('liv'))mk('liv',barCfg(D.livros.map(r=>r[0]),D.livros.map(r=>r[1]),{horiz:true,colors:D.livros.map(r=>['1–10 livros','Não há livros na sala'].includes(r[0])?'#ef4444':'#0d9488')}));
+ if(ids.includes('munChart')){
+  const ds=state.pub==="Formadores Municipais"?D.munFM:state.pub==="Formadores Estaduais"?D.munFE:D.munC;
+  const top=ds.slice(0,20);
+  mk('munChart',barCfg(top.map(r=>r[0]),top.map(r=>r[1]),{horiz:true,colors:'#1e3a5f'}));}
+ if(ids.includes('fUni')){const u=state.pub==="Formadores Estaduais"?D.fe.univ:D.fm.univ;mk('fUni',barCfg(u.map(r=>r[0]),u.map(r=>r[1])));}
+ if(ids.includes('fMun')){const m=state.pub==="Formadores Estaduais"?D.munFE:D.munFM;mk('fMun',barCfg(m.slice(0,15).map(r=>r[0]),m.slice(0,15).map(r=>r[1]),{horiz:true}));}
+ if(ids.includes('fFun')){const f=state.pub==="Formadores Estaduais"?D.fe.funcao:D.fm.funcao;mk('fFun',barCfg(f.map(r=>r[0]),f.map(r=>r[1]),{horiz:true}));}
+ /* tabelas dependentes de filtro */
+ if(document.getElementById('tbl_fUni'))fillTable('fUni',distTable(state.pub==="Formadores Estaduais"?D.fe.univ:D.fm.univ),["Universidade","n","%"]);
+ if(document.getElementById('tbl_fFun'))fillTable('fFun',distTable(state.pub==="Formadores Estaduais"?D.fe.funcao:D.fm.funcao),["Função em 2024","n","%"]);
+}
+function toggleAnim(){animOn=!animOn;document.getElementById('animBtn').textContent=animOn?'✦ Animações: ON':'✦ Animações: OFF';renderAll();}
+buildFilters();buildPages();go('geral');
+</script>
+</body>
+</html>
